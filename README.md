@@ -9,7 +9,7 @@ A Python voice assistant that works just like Amazon Alexa — wake word activat
 | Feature | Description |
 |---|---|
 | 🎙️ Wake Word | Say `"hey assistant"` to activate |
-| 🧠 Real-time AI | Streams Claude responses as they generate |
+| 🧠 Real-time AI | Streams responses as they generate |
 | 🔊 Text-to-Speech | Speaks responses sentence-by-sentence (low latency) |
 | ⌨️ Text Mode | Keyboard fallback if no microphone |
 | 💬 Conversation Memory | Remembers context across turns |
