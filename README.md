@@ -33,15 +33,7 @@ alexa_assistant/
 
 ## 🚀 Quick Start
 
-### Step 1 — Get an API Key
-
-1. Go to [console.anthropic.com](https://console.anthropic.com)
-2. Sign up / log in
-3. Create an API key under **API Keys**
-
----
-
-### Step 2 — Install
+### Step 1 — Install
 
 **Linux / Mac:**
 ```bash
@@ -71,7 +63,7 @@ pip install -r requirements.txt
 
 ---
 
-### Step 3 — Set API Key
+### Step 2 — Set API Key
 
 **Linux / Mac:**
 ```bash
@@ -90,7 +82,7 @@ $env:ANTHROPIC_API_KEY="sk-ant-your-key-here"
 
 ---
 
-### Step 4 — Run
+### Step 3 — Run
 
 ```bash
 python assistant.py
