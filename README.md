@@ -229,8 +229,4 @@ You:  quit
 Bot:  Goodbye! Have a great day!
 ```
 
----
 
-## 📄 License
-
-MIT — free to use, modify, and distribute.
