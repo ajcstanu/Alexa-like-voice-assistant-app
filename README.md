@@ -1,6 +1,6 @@
-# 🔵 AI Voice Assistant — Alexa-like, Claude-powered
+# 🔵 AI Voice Assistant — Alexa-like
 
-A Python voice assistant that works just like Amazon Alexa — wake word activation, real-time streaming AI responses, and text-to-speech output. Powered by **Claude (Anthropic)** for intelligent conversation.
+A Python voice assistant that works just like Amazon Alexa — wake word activation, real-time streaming AI responses, and text-to-speech output. 
 
 ---
 
