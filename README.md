@@ -1,7 +1,6 @@
 # 🔵 AI Voice Assistant — Alexa-like
 
 A Python voice assistant that works just like Amazon Alexa — wake word activation, real-time streaming AI responses, and text-to-speech output. 
-
 ---
 
 ## ✨ Features
@@ -17,7 +16,6 @@ A Python voice assistant that works just like Amazon Alexa — wake word activat
 | 🚪 Exit | Say `"quit"` or `"goodbye"` |
 
 ---
-
 ## 📁 Project Structure
 
 ```
