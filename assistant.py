@@ -37,19 +37,29 @@ except ImportError:
     print("[WARNING] pyttsx3 not installed. Text-to-speech disabled.")
     print("         Fix: pip install pyttsx3\n")
 
-# ─── Configuration ─────────────────────────────────────────────────────────────
+# ─── Configuration (all values from environment or safe defaults) ──────────────
 
-WAKE_WORDS    = ["hey assistant", "okay assistant", "hi assistant", "hello assistant"]
-MODEL         = "claude-sonnet-4-20250514"
-MAX_TOKENS    = 512
-MAX_HISTORY   = 10   # conversation turns to remember
+WAKE_WORDS  = os.environ.get(
+    "WAKE_WORDS",
+    "hey assistant,okay assistant,hi assistant,hello assistant"
+).split(",")
 
-SYSTEM_PROMPT = (
-    "You are a helpful, friendly voice assistant — like Alexa but smarter. "
-    "Keep responses concise and conversational (2-4 sentences max unless asked for detail). "
-    "Avoid markdown, bullet points, or any special formatting — speak naturally as if talking. "
-    "Be warm, helpful, and direct."
+MODEL       = os.environ.get("CLAUDE_MODEL", "claude-sonnet-4-20250514")
+MAX_TOKENS  = int(os.environ.get("MAX_TOKENS", "512"))
+MAX_HISTORY = int(os.environ.get("MAX_HISTORY", "10"))
+
+SYSTEM_PROMPT = os.environ.get(
+    "ASSISTANT_SYSTEM_PROMPT",
+    (
+        "You are a helpful, friendly voice assistant — like Alexa but smarter. "
+        "Keep responses concise and conversational (2-4 sentences max unless asked for detail). "
+        "Avoid markdown, bullet points, or any special formatting — speak naturally as if talking. "
+        "Be warm, helpful, and direct."
+    ),
 )
+
+TTS_RATE   = int(os.environ.get("TTS_RATE", "175"))      # words per minute
+TTS_VOLUME = float(os.environ.get("TTS_VOLUME", "0.9"))  # 0.0 – 1.0
 
 # ─── Text-to-Speech Engine ─────────────────────────────────────────────────────
 
@@ -63,11 +73,10 @@ class TTSEngine:
             return
         try:
             self.engine = pyttsx3.init()
-            self.engine.setProperty("rate",   175)   # words per minute
-            self.engine.setProperty("volume", 0.9)
+            self.engine.setProperty("rate",   TTS_RATE)
+            self.engine.setProperty("volume", TTS_VOLUME)
             voices = self.engine.getProperty("voices")
             if voices:
-                # Prefer second voice (often female) if available
                 self.engine.setProperty("voice", voices[min(1, len(voices) - 1)].id)
         except Exception as e:
             print(f"[TTS] Init error: {e}")
@@ -105,8 +114,8 @@ class VoiceListener:
             return
         try:
             self.recognizer = sr.Recognizer()
-            self.recognizer.pause_threshold        = 1.0
-            self.recognizer.energy_threshold       = 300
+            self.recognizer.pause_threshold          = 1.0
+            self.recognizer.energy_threshold         = 300
             self.recognizer.dynamic_energy_threshold = True
             self.microphone = sr.Microphone()
 
@@ -155,6 +164,8 @@ class VoiceListener:
 class AIBrain:
     """
     Manages conversation history and streams responses from Claude.
+    The API key is read exclusively from the ANTHROPIC_API_KEY environment
+    variable — never hardcoded.
     """
 
     def __init__(self):
@@ -171,12 +182,10 @@ class AIBrain:
     def ask(self, user_input: str, on_chunk=None) -> str:
         """
         Send user_input to Claude and return the full response.
-        If on_chunk is provided, it is called with each streamed text chunk
-        as they arrive (for real-time TTS / printing).
+        If on_chunk is provided, it is called with each streamed text chunk.
         """
         self.history.append({"role": "user", "content": user_input})
 
-        # Keep history within token-safe limits
         if len(self.history) > MAX_HISTORY * 2:
             self.history = self.history[-(MAX_HISTORY * 2):]
 
@@ -229,7 +238,6 @@ class VoiceAssistant:
         self.brain    = AIBrain()
         self.running  = False
 
-        # Streaming / TTS pipeline state
         self._stream_buffer = ""
         self._tts_queue: queue.Queue = queue.Queue()
         self._tts_thread: threading.Thread | None = None
@@ -237,10 +245,7 @@ class VoiceAssistant:
     # ── Sentence-streaming TTS pipeline ────────────────────────────────────────
 
     def _tts_worker(self):
-        """
-        Background thread that dequeues sentences and speaks them.
-        Receives None as a poison pill to stop.
-        """
+        """Background thread that dequeues sentences and speaks them."""
         while True:
             sentence = self._tts_queue.get()
             if sentence is None:
@@ -253,13 +258,11 @@ class VoiceAssistant:
     def _on_chunk(self, chunk: str):
         """
         Called for every streamed text chunk from Claude.
-        Accumulates text and enqueues complete sentences to the TTS worker
-        so speech starts before the full response is done.
+        Accumulates text and enqueues complete sentences for real-time TTS.
         """
         self._stream_buffer += chunk
         print(chunk, end="", flush=True)
 
-        # Drain any complete sentences from the buffer
         while True:
             cut = -1
             for sep in (".", "!", "?", "\n"):
@@ -274,11 +277,10 @@ class VoiceAssistant:
                 self._tts_queue.put(sentence)
 
     def _flush_tts(self):
-        """Flush any remaining buffered text and wait for TTS to finish."""
+        """Flush remaining buffered text and wait for TTS to finish."""
         if self._stream_buffer.strip() and self.tts.available:
             self._tts_queue.put(self._stream_buffer.strip())
         self._stream_buffer = ""
-        # Send poison pill and wait
         self._tts_queue.put(None)
         if self._tts_thread:
             self._tts_thread.join(timeout=60)
@@ -289,24 +291,17 @@ class VoiceAssistant:
         """Stream a Claude response and speak it in real time."""
         print("\n🤖  Assistant: ", end="", flush=True)
 
-        # Spin up the TTS worker
         self._tts_thread = threading.Thread(target=self._tts_worker, daemon=True)
         self._tts_thread.start()
 
-        # Stream Claude's reply (on_chunk feeds TTS queue in real time)
         self.brain.ask(user_input, on_chunk=self._on_chunk)
-
-        # Flush any leftover text, then wait for speech to finish
         self._flush_tts()
-        print()  # tidy newline after streaming output
+        print()
 
     # ── Built-in commands ───────────────────────────────────────────────────────
 
     def handle_command(self, text: str) -> bool:
-        """
-        Check for built-in commands.
-        Returns True if the text was a command (so the caller skips AI lookup).
-        """
+        """Check for built-in commands. Returns True if handled."""
         t = text.lower().strip()
 
         if t in {"quit", "exit", "goodbye", "bye", "stop"}:
@@ -331,12 +326,7 @@ class VoiceAssistant:
     # ── Run modes ───────────────────────────────────────────────────────────────
 
     def run_voice_mode(self):
-        """
-        Continuous loop:
-          1. Listen for wake word
-          2. On wake → listen for command
-          3. Respond via Claude + TTS
-        """
+        """Continuous wake-word → listen → respond loop."""
         self.running = True
         self.tts.speak("Hello! Say 'hey assistant' any time to talk to me.")
         print("💡  Wake words:", ", ".join(f'"{w}"' for w in WAKE_WORDS))
@@ -361,7 +351,7 @@ class VoiceAssistant:
                 self.respond(command)
 
     def run_text_mode(self):
-        """Keyboard-driven interaction loop (fallback if no mic)."""
+        """Keyboard-driven fallback loop."""
         self.running = True
         print("💬  TEXT MODE — type a message and press Enter.")
         print("    Commands: quit | reset | help\n")
