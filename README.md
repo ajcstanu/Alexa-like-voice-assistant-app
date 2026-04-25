@@ -165,6 +165,4 @@ TTSEngine      (pyttsx3 — speaks each sentence in real time)
 
 ---
 
-## 📄 License
 
-MIT License — free to use, modify, and distribute.
