@@ -1,4 +1,4 @@
-# 🔵 AI Voice Assistant — Claude-powered, Alexa-style
+# 🔵 AI Voice Assistant — Alexa-style
 
 A real-time voice assistant powered by the **Anthropic Claude API**.  
 Supports wake-word voice input, streaming AI responses, and text-to-speech output.  
