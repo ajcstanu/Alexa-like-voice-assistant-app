@@ -125,9 +125,12 @@ python assistant.py
 ## 🏗️ Project Structure
 
 ```
-voice-assistant/
-├── assistant.py   # Main application
-└── README.md      # This file
+alexa_assistant/
+├── assistant.py       # Main application (all logic)
+├── requirements.txt   # Python dependencies
+├── setup.sh           # Linux/Mac one-click setup
+├── setup.bat          # Windows one-click setup
+└── README.md          # This file
 ```
 
 ---
